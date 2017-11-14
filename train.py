@@ -1,26 +1,24 @@
 import argparse
+import glob
 import os
-import sys
+import time
 
 import chainer
+import chainer.functions as F
+import numpy as np
+from chainer import Variable
 from chainer import training
 from chainer.training import extension
 from chainer.training import extensions
 
-# sys.path.append(os.path.dirname(__file__))
-# sys.path.append(os.path.abspath(os.path.dirname(__file__)) + os.path.sep + os.path.pardir)
-
-from chainer_gan_lib.common.dataset import Cifar10Dataset
-from chainer_gan_lib.common.record import record_setting
+import datasets
+import progressive_updater
 from chainer_gan_lib.common.misc import copy_param
-
-from chainer_gan_lib.progressive.net import Discriminator, Generator
-from chainer_gan_lib.progressive.updater import Updater
+from chainer_gan_lib.common.record import record_setting
 from chainer_gan_lib.progressive.evaluation import sample_generate, sample_generate_light, calc_inception, calc_FID
+from chainer_gan_lib.progressive.net import Discriminator, Generator
 
-import numpy as np
-import chainer.functions as F
-from chainer import Variable
+import models.progressive_discriminator
 
 
 def check_chainer_version():
@@ -50,11 +48,13 @@ def check_chainer_version():
 def main():
     parser = argparse.ArgumentParser(
         description='Train script')
+    parser.add_argument('dataset_directory')
+    parser.add_argument('--resize', type=int, default=32)
     parser.add_argument('--batchsize', '-b', type=int, default=16)
     parser.add_argument('--max_iter', '-m', type=int, default=400000)
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
-    parser.add_argument('--out', '-o', default='result',
+    parser.add_argument('--out', '-o',
                         help='Directory to output the result')
     parser.add_argument('--snapshot_interval', type=int, default=25000,
                         help='Interval of snapshot')
@@ -78,9 +78,17 @@ def main():
     parser.add_argument('--pretrained_discriminator', type=str, default="")
     parser.add_argument('--initial_stage', type=float, default=0.0)
     parser.add_argument('--generator_smoothing', type=float, default=0.999)
-
     args = parser.parse_args()
-    record_setting(args.out)
+
+    result_directory = args.out
+    if args.out is None:
+        result_directory_name = "_".join([
+            "resize{}".format(args.resize),
+            str(int(time.time())),
+        ])
+        result_directory = os.path.join('result', result_directory_name)
+
+    record_setting(result_directory)
     check_chainer_version()
 
     report_keys = ["stage", "loss_dis", "loss_gp", "loss_gen", "g", "inception_mean", "inception_std", "FID"]
@@ -91,7 +99,9 @@ def main():
 
     generator = Generator()
     generator_smooth = Generator()
-    discriminator = Discriminator(pooling_comp=args.pooling_comp)
+    # discriminator = Discriminator(pooling_comp=args.pooling_comp)
+    discriminator = models.progressive_discriminator.ProgressiveDiscriminator(
+        pooling_comp=args.pooling_comp, channel_evolution=(512, 512, 512, 256))
 
     # select GPU
     if args.gpu >= 0:
@@ -116,11 +126,18 @@ def main():
     opt_gen = make_optimizer(generator)
     opt_dis = make_optimizer(discriminator)
 
-    train_dataset = Cifar10Dataset()
+    if args.dataset_directory == 'cifar10':
+        import chainer_gan_lib.common.dataset
+        train_dataset = chainer_gan_lib.common.dataset.Cifar10Dataset()
+    else:
+        dataset_pathes = list(glob.glob("{}/*".format(args.dataset_directory)))
+        print("use {} files".format(len(dataset_pathes)))
+        train_dataset = datasets.ResizedImageDataset(dataset_pathes, resize=(args.resize, args.resize))
     train_iter = chainer.iterators.SerialIterator(train_dataset, args.batchsize)
 
     # Set up a trainer
-    updater = Updater(
+    updater = progressive_updater.ProgressiveUpdater(
+        resolution=args.resize,
         models=(generator, discriminator, generator_smooth),
         iterator={
             'main': train_iter},
@@ -135,7 +152,7 @@ def main():
         initial_stage=args.initial_stage,
         stage_interval=args.stage_interval
     )
-    trainer = training.Trainer(updater, (max_iter, 'iteration'), out=args.out)
+    trainer = training.Trainer(updater, (max_iter, 'iteration'), out=result_directory)
     trainer.extend(extensions.snapshot_object(
         generator, 'generator_{.updater.iteration}.npz'), trigger=(args.snapshot_interval, 'iteration'))
     trainer.extend(extensions.snapshot_object(
@@ -146,15 +163,16 @@ def main():
     trainer.extend(extensions.LogReport(keys=report_keys,
                                         trigger=(args.display_interval, 'iteration')))
     trainer.extend(extensions.PrintReport(report_keys), trigger=(args.display_interval, 'iteration'))
-    trainer.extend(sample_generate(generator_smooth, args.out), trigger=(args.out_image_interval, 'iteration'),
+    trainer.extend(sample_generate(generator_smooth, result_directory),
+                   trigger=(args.out_image_interval, 'iteration'),
                    priority=extension.PRIORITY_WRITER)
-    trainer.extend(sample_generate_light(generator_smooth, args.out),
+    trainer.extend(sample_generate_light(generator_smooth, result_directory),
                    trigger=(args.evaluation_interval // 10, 'iteration'),
                    priority=extension.PRIORITY_WRITER)
-    trainer.extend(calc_inception(generator_smooth), trigger=(args.evaluation_interval, 'iteration'),
-                   priority=extension.PRIORITY_WRITER)
-    trainer.extend(calc_FID(generator_smooth), trigger=(args.evaluation_interval, 'iteration'),
-                   priority=extension.PRIORITY_WRITER)
+    # trainer.extend(calc_inception(generator_smooth), trigger=(args.evaluation_interval, 'iteration'),
+    #                priority=extension.PRIORITY_WRITER)
+    # trainer.extend(calc_FID(generator_smooth), trigger=(args.evaluation_interval, 'iteration'),
+    #                priority=extension.PRIORITY_WRITER)
     trainer.extend(extensions.ProgressBar(update_interval=10))
 
     # Run the training
