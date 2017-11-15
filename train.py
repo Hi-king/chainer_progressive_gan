@@ -57,11 +57,11 @@ def main():
                         help='GPU ID (negative value indicates CPU)')
     parser.add_argument('--out', '-o',
                         help='Directory to output the result')
-    parser.add_argument('--snapshot_interval', type=int, default=25000,
+    parser.add_argument('--snapshot_interval', type=int, default=5000,
                         help='Interval of snapshot')
     parser.add_argument('--evaluation_interval', type=int, default=50000,
                         help='Interval of evaluation')
-    parser.add_argument('--out_image_interval', type=int, default=12500,
+    parser.add_argument('--out_image_interval', type=int, default=5000,
                         help='Interval of evaluation')
     parser.add_argument('--stage_interval', type=int, default=400000,
                         help='Interval of stage progress')
@@ -85,6 +85,7 @@ def main():
     if args.out is None:
         result_directory_name = "_".join([
             "resize{}".format(args.resize),
+            "stage{}".format(args.initial_stage),
             "batch{}".format(args.batchsize),
             "stginterval{}".format(args.stage_interval),
             str(int(time.time())),
@@ -105,9 +106,8 @@ def main():
     elif args.resize == 128:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64)
     elif args.resize == 256:
-        # channel_evolution = (512, 512, 512, 512, 256, 128, 64) # too much memory
-        channel_evolution = (512, 512, 512, 256, 128, 64, 32)
-        # channel_evolution = (512, 512, 256, 128, 64, 8, 4)
+        channel_evolution = (512, 512, 512, 512, 256, 128, 64) # too much memory
+        # channel_evolution = (512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 512:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 1024:
