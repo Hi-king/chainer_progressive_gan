@@ -55,7 +55,7 @@ def main():
     parser.add_argument('--max_iter', '-m', type=int, default=4000000)
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
-    parser.add_argument('--out', '-o',
+    parser.add_argument('--out', '-o', default="result",
                         help='Directory to output the result')
     parser.add_argument('--snapshot_interval', type=int, default=5000,
                         help='Interval of snapshot')
@@ -81,16 +81,14 @@ def main():
     parser.add_argument('--generator_smoothing', type=float, default=0.999)
     args = parser.parse_args()
 
-    result_directory = args.out
-    if args.out is None:
-        result_directory_name = "_".join([
-            "resize{}".format(args.resize),
-            "stage{}".format(args.initial_stage),
-            "batch{}".format(args.batchsize),
-            "stginterval{}".format(args.stage_interval),
-            str(int(time.time())),
-        ])
-        result_directory = os.path.join('result', result_directory_name)
+    result_directory_name = "_".join([
+        "resize{}".format(args.resize),
+        "stage{}".format(args.initial_stage),
+        "batch{}".format(args.batchsize),
+        "stginterval{}".format(args.stage_interval),
+        str(int(time.time())),
+    ])
+    result_directory = os.path.join(args.out, result_directory_name)
 
     record_setting(result_directory)
     check_chainer_version()
@@ -106,7 +104,7 @@ def main():
     elif args.resize == 128:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64)
     elif args.resize == 256:
-        channel_evolution = (512, 512, 512, 512, 256, 128, 64) # too much memory
+        channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
         # channel_evolution = (512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 512:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
