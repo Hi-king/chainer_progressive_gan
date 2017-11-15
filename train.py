@@ -16,9 +16,10 @@ import progressive_updater
 from chainer_gan_lib.common.misc import copy_param
 from chainer_gan_lib.common.record import record_setting
 from chainer_gan_lib.progressive.evaluation import sample_generate, sample_generate_light, calc_inception, calc_FID
-from chainer_gan_lib.progressive.net import Discriminator, Generator
+# from chainer_gan_lib.progressive.net import Discriminator, Generator
 
 import models.progressive_discriminator
+import models.progressive_generator
 
 
 def check_chainer_version():
@@ -51,7 +52,7 @@ def main():
     parser.add_argument('dataset_directory')
     parser.add_argument('--resize', type=int, default=32)
     parser.add_argument('--batchsize', '-b', type=int, default=16)
-    parser.add_argument('--max_iter', '-m', type=int, default=400000)
+    parser.add_argument('--max_iter', '-m', type=int, default=4000000)
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
     parser.add_argument('--out', '-o',
@@ -84,6 +85,8 @@ def main():
     if args.out is None:
         result_directory_name = "_".join([
             "resize{}".format(args.resize),
+            "batch{}".format(args.batchsize),
+            "stginterval{}".format(args.stage_interval),
             str(int(time.time())),
         ])
         result_directory = os.path.join('result', result_directory_name)
@@ -97,11 +100,28 @@ def main():
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
 
-    generator = Generator()
-    generator_smooth = Generator()
+    if args.resize == 32:
+        channel_evolution = (512, 512, 512, 256)
+    elif args.resize == 128:
+        channel_evolution = (512, 512, 512, 512, 256, 128, 64)
+    elif args.resize == 256:
+        # channel_evolution = (512, 512, 512, 512, 256, 128, 64) # too much memory
+        channel_evolution = (512, 512, 512, 256, 128, 64, 32)
+        # channel_evolution = (512, 512, 256, 128, 64, 8, 4)
+    elif args.resize == 512:
+        channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
+    elif args.resize == 1024:
+        channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32, 16)
+    else:
+        raise Exception()
+
+    # generator = Generator()
+    # generator_smooth = Generator()
+    generator = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+    generator_smooth = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
     # discriminator = Discriminator(pooling_comp=args.pooling_comp)
     discriminator = models.progressive_discriminator.ProgressiveDiscriminator(
-        pooling_comp=args.pooling_comp, channel_evolution=(512, 512, 512, 256))
+        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
 
     # select GPU
     if args.gpu >= 0:
