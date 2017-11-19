@@ -102,7 +102,7 @@ def main():
     if args.resize == 32:
         channel_evolution = (512, 512, 512, 256)
     elif args.resize == 128:
-        channel_evolution = (512, 512, 512, 512, 256, 128, 64)
+        channel_evolution = (512, 512, 512, 512, 256, 128)
     elif args.resize == 256:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
         # channel_evolution = (512, 512, 512, 256, 128, 64, 32)
