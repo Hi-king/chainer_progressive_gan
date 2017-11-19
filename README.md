@@ -3,6 +3,11 @@ Learning animeface latent space using Progressive GAN
 
 ## RUN
 
+```
+pip install git+https://github.com/Hi-king/chainer.git@feature/for_gan
+python train.py --gpu=1 --resize 256 /mnt/dwango/ogaki/dataset/celeba_faces_kawaii_creator
+```
+
 ## Result
 
 Stage-by-Stage animation
