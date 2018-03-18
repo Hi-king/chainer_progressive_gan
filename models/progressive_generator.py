@@ -49,7 +49,7 @@ class ProgressiveGenerator(chainer.Chain):
         z /= xp.sqrt(xp.sum(z * z, axis=1, keepdims=True) / self.n_hidden + 1e-8)
         return z
 
-    def __call__(self, z, stage, test_resolution=32):
+    def __call__(self, z, stage=None, test_resolution=32):
         # stage0: c0->c1->out0
         # stage1: c0->c1-> (1-a)*(up->out0) + (a)*(b1->out1)
         # stage2: c0->c1->b1->out1
@@ -57,6 +57,8 @@ class ProgressiveGenerator(chainer.Chain):
         # stage4: c0->c1->b2->out2
         # ...
 
+        if stage is None:
+            stage = self.max_stage
         stage = min(stage, self.max_stage)
         alpha = stage - math.floor(stage)
         stage = math.floor(stage)
