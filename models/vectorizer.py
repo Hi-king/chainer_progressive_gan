@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import chainer
-import math
 from chainer_gan_lib.progressive.net import EqualizedConv2d, DiscriminatorBlock, EqualizedLinear, minibatch_std
 
 
@@ -11,9 +10,6 @@ class Vectorizer(chainer.Chain):
         self.max_stage = (len(channel_evolution) - 1) * 2
         self.pooling_comp = pooling_comp  # compensation of ave_pool is 0.5-Lipshitz
         with self.init_scope():
-            # ins = [
-            #     EqualizedConv2d(3, channel_evolution[0], 1, 1, 0)
-            # ]
             bs = [
                 chainer.Link()  # dummy
             ]
@@ -21,7 +17,6 @@ class Vectorizer(chainer.Chain):
 
             for i in range(1, len(channel_evolution)):
                 bs.append(DiscriminatorBlock(channel_evolution[i], channel_evolution[i - 1], pooling_comp))
-            # self.ins = chainer.ChainList(*ins)
             self.bs = chainer.ChainList(*bs)
 
             self.out0 = EqualizedConv2d(ch + 1, ch, 3, 1, 1)
@@ -29,7 +24,6 @@ class Vectorizer(chainer.Chain):
 
     def __call__(self, x):
         stage = self.max_stage
-        # fromRGB = self.ins[stage // 2]
         h = chainer.functions.leaky_relu(self.fromRGB(x))
 
         for i in range(int(stage // 2), 0, -1):

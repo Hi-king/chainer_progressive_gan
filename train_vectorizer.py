@@ -45,6 +45,7 @@ def augment(original_img, max_margin=10):
                   ]
     return cv2.resize(cropped_img, (original_width, original_height))
 
+
 if args.resize == 32:
     channel_evolution = (512, 512, 512, 256)
 elif args.resize == 128:
