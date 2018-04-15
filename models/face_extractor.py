@@ -14,26 +14,24 @@ class FaceExtractor(object):
 
     def extract(self, img_file):
         target_img = cv2.imread(img_file)
-        print(target_img.shape)
         gray_img = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
         gray_img_preprocessed = cv2.equalizeHist(gray_img)
-        print(gray_img_preprocessed.shape)
         faces = self.classifier.detectMultiScale(
             gray_img_preprocessed,
             scaleFactor=1.1,
             minNeighbors=5,
             minSize=(24, 24))
-        print(len(faces))
         if len(faces) == 0:
             raise (Exception("Could not find face from img"))
 
         x, y, width, height = faces[0]
         image_width, image_height, _ = target_img.shape
-        margin = min(
+        margin = int(min(
             y, image_height - y - width,
             x, image_width - x - width,
                width * self.margin
-        )
+        ))
+        print(y - margin,y + height + margin, x - margin, x + width + margin)
         rgb_img = cv2.cvtColor(cv2.resize(
             target_img[y - margin:y + height + margin, x - margin:x + width + margin],
             (128, 128),
