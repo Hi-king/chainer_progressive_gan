@@ -1,7 +1,17 @@
 # chainer_progressive_gan
 Learning animeface latent space using Progressive GAN
 
-## RUN
+## Run pre-trained model
+
+```
+from chainer_progressive_gan import KawaiiGenerator
+creator = KawaiiGenerator()
+image = creator.create_one()
+image.save("test.png")
+```
+
+
+## Re-training
 
 ```
 pip install git+https://github.com/Hi-king/chainer.git@feature/for_gan

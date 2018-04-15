@@ -1,0 +1,1 @@
+from .kawaii_generator import KawaiiGenerator
