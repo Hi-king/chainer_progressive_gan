@@ -11,15 +11,13 @@ from chainer import training
 from chainer.training import extension
 from chainer.training import extensions
 
-import datasets
-import progressive_updater
+from chainer_progressive_gan import progressive_updater, datasets
 from chainer_gan_lib.common.misc import copy_param
 from chainer_gan_lib.common.record import record_setting
-from chainer_gan_lib.progressive.evaluation import sample_generate, sample_generate_light, calc_inception, calc_FID
+from chainer_gan_lib.progressive.evaluation import sample_generate, sample_generate_light
 # from chainer_gan_lib.progressive.net import Discriminator, Generator
 
-import models.progressive_discriminator
-import models.progressive_generator
+import chainer_progressive_gan.models.progressive_generator
 
 
 def check_chainer_version():
@@ -115,10 +113,10 @@ def main():
 
     # generator = Generator()
     # generator_smooth = Generator()
-    generator = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
-    generator_smooth = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+    generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+    generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
     # discriminator = Discriminator(pooling_comp=args.pooling_comp)
-    discriminator = models.progressive_discriminator.ProgressiveDiscriminator(
+    discriminator = chainer_progressive_gan.models.progressive_discriminator.ProgressiveDiscriminator(
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
 
     # select GPU

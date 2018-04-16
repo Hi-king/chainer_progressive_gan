@@ -9,7 +9,8 @@ import cv2
 import numpy
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import models
+from chainer_progressive_gan import models
+
 
 def main(args):
     if args.resize == 32:
@@ -25,9 +26,9 @@ def main(args):
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32, 16)
     else:
         raise Exception()
-    generator = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+    generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
     chainer.serializers.load_npz(args.model_generator, generator)
-    vectorizer = models.vectorizer.Vectorizer(channel_evolution=channel_evolution)
+    vectorizer = chainer_progressive_gan.models.vectorizer.Vectorizer(channel_evolution=channel_evolution)
     chainer.serializers.load_npz(args.model_vectorizer, vectorizer)
 
     extractor = models.FaceExtractor(

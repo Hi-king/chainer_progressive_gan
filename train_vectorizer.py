@@ -12,7 +12,6 @@ import pylab
 import cv2
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-import models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("model_file")
@@ -60,10 +59,10 @@ elif args.resize == 1024:
 else:
     raise Exception()
 
-generator = models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
 chainer.serializers.load_npz(args.model_file, generator)
 optimizer = chainer.optimizers.Adam(alpha=0.001)
-vectorizer = models.vectorizer.Vectorizer(channel_evolution=channel_evolution)
+vectorizer = chainer_progressive_gan.models.vectorizer.Vectorizer(channel_evolution=channel_evolution)
 if args.gpu >= 0:
     generator.to_gpu()
     vectorizer.to_gpu()

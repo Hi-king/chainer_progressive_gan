@@ -5,9 +5,7 @@ import os
 import chainer
 import numpy
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-import models
-
+import chainer_progressive_gan
 from PIL import Image
 
 
@@ -38,7 +36,7 @@ def make_image(gen, stage, seed=0, rows=10, cols=10):
 class KawaiiGenerator(object):
     def __init__(self, model="sample/generator_smooth_275000.npz", stage: int = None):
         self.stage = stage
-        self.generator = models.progressive_generator.ProgressiveGenerator(
+        self.generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
             channel_evolution=(512, 512, 512, 512, 256, 128)
         )
         chainer.serializers.load_npz(model, self.generator)
