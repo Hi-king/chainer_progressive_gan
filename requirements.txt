@@ -1,2 +1,3 @@
 chainer >= 4.0.0b2
 tqdm
+pillow

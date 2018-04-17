@@ -1,7 +1,15 @@
 # chainer_progressive_gan
 Learning animeface latent space using Progressive GAN
 
-## Run pre-trained model
+## Create Kawaii !
+
+![](https://raw.githubusercontent.com/Hi-king/chainer_progressive_gan/master/sample/preview.png)
+
+
+```
+pip install git+https://github.com/Hi-king/chainer_progressive_gan.git
+# need git-lfs(https://github.com/git-lfs/git-lfs/wiki/Installation)
+```
 
 ```
 from chainer_progressive_gan import KawaiiGenerator
@@ -14,7 +22,6 @@ image.save("test.png")
 ## Re-training
 
 ```
-pip install git+https://github.com/Hi-king/chainer.git@feature/for_gan
 python train.py --gpu=1 --resize 256 /mnt/dwango/ogaki/dataset/celeba_faces_kawaii_creator
 ```
 
@@ -24,9 +31,6 @@ Stage-by-Stage animation
 
 ![](https://raw.githubusercontent.com/Hi-king/chainer_progressive_gan/master/sample/preview.gif)
 
-128x128 sample
-
-![](https://raw.githubusercontent.com/Hi-king/chainer_progressive_gan/master/sample/preview.png)
 
 ## Acknowledgements
 

@@ -69,3 +69,9 @@ class KawaiiGenerator(object):
         with chainer.no_backprop_mode(), chainer.using_config('train', False):
             predicted = self.generator(z_data)
             return self.to_image(chainer.cuda.to_cpu(predicted.data))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.create_one()
