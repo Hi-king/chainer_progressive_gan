@@ -36,7 +36,13 @@ class KawaiiGenerator(object):
             model = os.path.join(os.path.dirname(__file__), "..", "sample", "generator_smooth_275000.npz")
             if os.stat(model).st_size < 1024 * 1024:
                 raise Exception("""
+                Pre-trained model might be broken.
+                You need to reinstall chainer_progressive_gan.
+                
+                ========================================================================================
                 >>> git-lfs <<<  should be installed before `pip install chainer_progressive_gan`
+                (https://github.com/git-lfs/git-lfs/wiki/Installation)
+                ========================================================================================
                 """)
         self.stage = stage
         self.generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
