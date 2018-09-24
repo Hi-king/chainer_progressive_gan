@@ -22,6 +22,9 @@ class FaceBlendedDataset(dataset_mixin.DatasetMixin):
     def __len__(self):
         return len(self.paths)
 
+    def _todata(self, original):
+        return (numpy.float32(original).transpose((2, 0, 1)) - 127.5) / 127.5
+
     def get_example(self, i) -> (numpy.ndarray, numpy.ndarray):
         image_path = self.paths[i]
         json_path = image_path.parent / (image_path.stem + ".json")
@@ -46,7 +49,7 @@ class FaceBlendedDataset(dataset_mixin.DatasetMixin):
                                                                           face_meta.x + face_meta.width - int(
                                                                               margin * face_meta.height)]
         if self.resize is None:
-            return numpy.float32(image).transpose((2, 0, 1)), numpy.float32(original_image).transpose((2, 0, 1))
+            return self._todata(image), self._todata(original_image)
         else:
-            return numpy.float32(cv2.resize(image, self.resize)).transpose((2, 0, 1)), numpy.float32(cv2.resize(original_image, self.resize)).transpose((2, 0, 1))
+            return self._todata(cv2.resize(image, self.resize)), self._todata(cv2.resize(original_image, self.resize))
             # return numpy.float32(cv2.resize(image, self.resize)), numpy.float32(cv2.resize(original_image, self.resize))

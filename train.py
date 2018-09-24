@@ -15,7 +15,6 @@ from chainer_progressive_gan import progressive_updater, datasets
 from chainer_gan_lib.common.misc import copy_param
 from chainer_gan_lib.common.record import record_setting
 from chainer_gan_lib.progressive.evaluation import sample_generate, sample_generate_light
-# from chainer_gan_lib.progressive.net import Discriminator, Generator
 
 import chainer_progressive_gan.models.progressive_generator
 
