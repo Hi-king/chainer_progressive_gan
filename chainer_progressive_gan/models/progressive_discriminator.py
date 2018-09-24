@@ -4,7 +4,7 @@ import math
 from chainer_gan_lib.progressive.net import EqualizedConv2d, DiscriminatorBlock, EqualizedLinear, minibatch_std
 
 
-class ProgressiveDiscriminator(chainer.Chain):
+class ProgressiveVectorizer(chainer.Chain):
     """
     @see https://github.com/pfnet-research/chainer-gan-lib/blob/master/progressive/net.py
 
@@ -12,26 +12,23 @@ class ProgressiveDiscriminator(chainer.Chain):
     """
 
     def __init__(self, ch=512, pooling_comp=1.0,
-                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16)):
-        super(ProgressiveDiscriminator, self).__init__()
+                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False):
+        super().__init__()
         self.max_stage = (len(channel_evolution) - 1) * 2
         self.pooling_comp = pooling_comp  # compensation of ave_pool is 0.5-Lipshitz
+        first_channel = 6 if conditional else 3
         with self.init_scope():
             ins = [
-                EqualizedConv2d(3, channel_evolution[0], 1, 1, 0)
+                EqualizedConv2d(first_channel, channel_evolution[0], 1, 1, 0)
             ]
             bs = [
                 chainer.Link()  # dummy
             ]
             for i in range(1, len(channel_evolution)):
-                ins.append(EqualizedConv2d(3, channel_evolution[i], 1, 1, 0))
+                ins.append(EqualizedConv2d(first_channel, channel_evolution[i], 1, 1, 0))
                 bs.append(DiscriminatorBlock(channel_evolution[i], channel_evolution[i - 1], pooling_comp))
             self.ins = chainer.ChainList(*ins)
             self.bs = chainer.ChainList(*bs)
-
-            self.out0 = EqualizedConv2d(ch + 1, ch, 3, 1, 1)
-            self.out1 = EqualizedConv2d(ch, ch, 4, 1, 0)
-            self.out2 = EqualizedLinear(ch, 1)
 
     def __call__(self, x, stage):
         # stage0: in0->m_std->out0_0->out0_1->out0_2
@@ -58,9 +55,29 @@ class ProgressiveDiscriminator(chainer.Chain):
             h1 = b1(chainer.functions.leaky_relu(fromRGB1(x)))
             h = (1 - alpha) * h0 + alpha * h1
 
+        hs = [h]
         for i in range(int(stage // 2), 0, -1):
             h = self.bs[i](h)
+            hs.append(h)
+        return hs
+        #
+        # h = minibatch_std(h)
+        # h = chainer.functions.leaky_relu((self.out0(h)))
+        # h = chainer.functions.leaky_relu((self.out1(h)))
+        # return self.out2(h), hs
 
+
+class ProgressiveDiscriminator(ProgressiveVectorizer):
+    def __init__(self, ch=512, pooling_comp=1.0,
+                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False):
+        super().__init__(ch=ch, pooling_comp=pooling_comp, channel_evolution=channel_evolution, conditional=conditional)
+        with self.init_scope():
+            self.out0 = EqualizedConv2d(ch + 1, ch, 3, 1, 1)
+            self.out1 = EqualizedConv2d(ch, ch, 4, 1, 0)
+            self.out2 = EqualizedLinear(ch, 1)
+
+    def __call__(self, x, stage):
+        h = super().__call__(x, stage)[-1]
         h = minibatch_std(h)
         h = chainer.functions.leaky_relu((self.out0(h)))
         h = chainer.functions.leaky_relu((self.out1(h)))

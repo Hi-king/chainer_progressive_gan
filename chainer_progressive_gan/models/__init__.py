@@ -2,6 +2,7 @@
 from . import progressive_discriminator
 from . import progressive_generator
 from . import vectorizer
+from .progressive_discriminator import ProgressiveVectorizer, ProgressiveDiscriminator
 
 try:
     import cv2

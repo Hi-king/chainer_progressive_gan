@@ -44,6 +44,14 @@ def check_chainer_version():
         exit(0)
 
 
+# Setup an optimizer
+def make_optimizer(model, alpha=0.001, beta1=0.0, beta2=0.99):
+    optimizer = chainer.optimizers.Adam(alpha=alpha, beta1=beta1, beta2=beta2)
+    optimizer.setup(model)
+    # optimizer.add_hook(chainer.optimizer.WeightDecay(0.00001), 'hook_dec')
+    return optimizer
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Train script')
@@ -113,8 +121,10 @@ def main():
 
     # generator = Generator()
     # generator_smooth = Generator()
-    generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
-    generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(channel_evolution=channel_evolution)
+    generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
+        channel_evolution=channel_evolution)
+    generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
+        channel_evolution=channel_evolution)
     # discriminator = Discriminator(pooling_comp=args.pooling_comp)
     discriminator = chainer_progressive_gan.models.progressive_discriminator.ProgressiveDiscriminator(
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
@@ -131,13 +141,6 @@ def main():
     if args.pretrained_discriminator != "":
         chainer.serializers.load_npz(args.pretrained_discriminator, discriminator)
     copy_param(generator_smooth, generator)
-
-    # Setup an optimizer
-    def make_optimizer(model, alpha=0.001, beta1=0.0, beta2=0.99):
-        optimizer = chainer.optimizers.Adam(alpha=alpha, beta1=beta1, beta2=beta2)
-        optimizer.setup(model)
-        # optimizer.add_hook(chainer.optimizer.WeightDecay(0.00001), 'hook_dec')
-        return optimizer
 
     opt_gen = make_optimizer(generator)
     opt_dis = make_optimizer(discriminator)

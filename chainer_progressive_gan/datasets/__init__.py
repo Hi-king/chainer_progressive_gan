@@ -1,1 +1,2 @@
 from .image_dataset import PILImageDataset, ResizedImageDataset
+from .face_blended_dataset import FaceBlendedDataset

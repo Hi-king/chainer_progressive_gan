@@ -15,7 +15,11 @@ class FaceMeta(object):
         self.x = x
 
     def to_json(self):
-        return json.dumps({k:int(v) for k, v in self.__dict__.items()})
+        return json.dumps({k: int(v) for k, v in self.__dict__.items()})
+
+    @staticmethod
+    def from_json(json_data):
+        return FaceMeta(**json_data)
 
 
 class FaceExtractor(object):

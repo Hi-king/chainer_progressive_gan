@@ -5,6 +5,7 @@ import numpy
 from chainer_gan_lib.progressive.net import feature_vector_normalization, EqualizedConv2d, EqualizedDeconv2d, \
     GeneratorBlock
 
+
 class ProgressiveGenerator(chainer.Chain):
     """
     @see https://github.com/pfnet-research/chainer-gan-lib/blob/master/progressive/net.py
@@ -13,24 +14,30 @@ class ProgressiveGenerator(chainer.Chain):
     """
 
     def __init__(self, n_hidden=512, ch=512,
-                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16)):
+                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False):
         super(ProgressiveGenerator, self).__init__()
         self.n_hidden = n_hidden
         self.max_stage = (len(channel_evolution) - 1) * 2
         with self.init_scope():
             # self.c0 = EqualizedDeconv2d(n_hidden, ch, 4, 1, 0)
             self.c0 = EqualizedConv2d(n_hidden, ch, 4, 1, 3)
-            self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
+            if conditional:
+                self.c1 = EqualizedConv2d(ch*2, ch, 3, 1, 1)
+            else:
+                self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
             # self.out0 = EqualizedConv2d(ch, 3, 1, 1, 0)
             bs = [
                 chainer.Link()  # dummy
             ]
             outs = [
-                EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0),
+                EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0)
             ]
 
             for i in range(1, len(channel_evolution)):
-                bs.append(GeneratorBlock(channel_evolution[i - 1], channel_evolution[i]))
+                if conditional:
+                    bs.append(GeneratorBlock(channel_evolution[i - 1] * 2, channel_evolution[i]))
+                else:
+                    bs.append(GeneratorBlock(channel_evolution[i - 1], channel_evolution[i]))
                 outs.append(EqualizedConv2d(channel_evolution[i], 3, 1, 1, 0))
             self.bs = chainer.ChainList(*bs)
             self.outs = chainer.ChainList(*outs)
@@ -49,7 +56,7 @@ class ProgressiveGenerator(chainer.Chain):
         z /= xp.sqrt(xp.sum(z * z, axis=1, keepdims=True) / self.n_hidden + 1e-8)
         return z
 
-    def __call__(self, z, stage=None, test_resolution=32):
+    def __call__(self, z, stage=None, test_resolution=32, skip_hs=None):
         # stage0: c0->c1->out0
         # stage1: c0->c1-> (1-a)*(up->out0) + (a)*(b1->out1)
         # stage2: c0->c1->b1->out1
@@ -65,10 +72,13 @@ class ProgressiveGenerator(chainer.Chain):
 
         h = chainer.functions.reshape(z, (len(z), self.n_hidden, 1, 1))
         h = chainer.functions.leaky_relu(feature_vector_normalization(self.c0(h)))
+        if skip_hs is not None:
+            h = chainer.functions.concat([h, skip_hs[-1]], axis=1)
         h = chainer.functions.leaky_relu(feature_vector_normalization(self.c1(h)))
 
         for i in range(1, int(stage // 2 + 1)):
-            # h = getattr(self, "b%d" % i)(h)
+            if skip_hs is not None:  # conditional
+                h = chainer.functions.concat([h, skip_hs[-1 - i]], axis=1)
             h = self.bs[i](h)
 
         if int(stage) % 2 == 0:
