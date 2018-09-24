@@ -42,9 +42,11 @@ class ProgressiveVectorizer(chainer.Chain):
         alpha = stage - math.floor(stage)
         stage = math.floor(stage)
 
+        hs = []
         if int(stage) % 2 == 0:
             fromRGB = self.ins[stage // 2]
             h = chainer.functions.leaky_relu(fromRGB(x))
+            hs.append(h)
         else:
             fromRGB0 = self.ins[stage // 2]
             fromRGB1 = self.ins[stage // 2 + 1]
@@ -52,19 +54,14 @@ class ProgressiveVectorizer(chainer.Chain):
 
             h0 = chainer.functions.leaky_relu(
                 fromRGB0(self.pooling_comp * chainer.functions.average_pooling_2d(x, 2, 2, 0)))
+            hs.append(h0)
             h1 = b1(chainer.functions.leaky_relu(fromRGB1(x)))
+            hs.append(h1)
             h = (1 - alpha) * h0 + alpha * h1
-
-        hs = [h]
         for i in range(int(stage // 2), 0, -1):
             h = self.bs[i](h)
             hs.append(h)
         return hs
-        #
-        # h = minibatch_std(h)
-        # h = chainer.functions.leaky_relu((self.out0(h)))
-        # h = chainer.functions.leaky_relu((self.out1(h)))
-        # return self.out2(h), hs
 
 
 class ProgressiveDiscriminator(ProgressiveVectorizer):

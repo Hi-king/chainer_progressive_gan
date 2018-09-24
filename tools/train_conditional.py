@@ -103,7 +103,8 @@ def main(args: argparse.Namespace):
     trainer.extend(chainer.training.extensions.PrintReport(report_keys), trigger=(args.display_interval, 'iteration'))
     trainer.extend(
         chainer_progressive_gan.training.GenerateSampleWithCondition(vectorizer, generator, input_dataset=dataset,
-                                                                     output_dir=result_directory, rows=3, cols=3))
+                                                                     output_dir=result_directory, rows=3, cols=3),
+        trigger=(args.out_image_interval, 'iteration'))
     # trainer.extend(sample_generate(generator_smooth, result_directory),
     #                trigger=(args.out_image_interval, 'iteration'),
     #                priority=extension.PRIORITY_WRITER)

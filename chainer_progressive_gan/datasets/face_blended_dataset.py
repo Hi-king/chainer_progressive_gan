@@ -52,4 +52,3 @@ class FaceBlendedDataset(dataset_mixin.DatasetMixin):
             return self._todata(image), self._todata(original_image)
         else:
             return self._todata(cv2.resize(image, self.resize)), self._todata(cv2.resize(original_image, self.resize))
-            # return numpy.float32(cv2.resize(image, self.resize)), numpy.float32(cv2.resize(original_image, self.resize))

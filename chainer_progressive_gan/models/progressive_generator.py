@@ -19,26 +19,26 @@ class ProgressiveGenerator(chainer.Chain):
         self.n_hidden = n_hidden
         self.max_stage = (len(channel_evolution) - 1) * 2
         with self.init_scope():
-            # self.c0 = EqualizedDeconv2d(n_hidden, ch, 4, 1, 0)
             self.c0 = EqualizedConv2d(n_hidden, ch, 4, 1, 3)
-            if conditional:
-                self.c1 = EqualizedConv2d(ch*2, ch, 3, 1, 1)
-            else:
-                self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
-            # self.out0 = EqualizedConv2d(ch, 3, 1, 1, 0)
+            self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
             bs = [
                 chainer.Link()  # dummy
             ]
             outs = [
-                EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0)
+
             ]
+            if conditional:
+                outs.append(EqualizedConv2d(channel_evolution[0] * 2, 3, 1, 1, 0))
+            else:
+                outs.append(EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0))
 
             for i in range(1, len(channel_evolution)):
                 if conditional:
                     bs.append(GeneratorBlock(channel_evolution[i - 1] * 2, channel_evolution[i]))
+                    outs.append(EqualizedConv2d(channel_evolution[i] * 2, 3, 1, 1, 0))
                 else:
                     bs.append(GeneratorBlock(channel_evolution[i - 1], channel_evolution[i]))
-                outs.append(EqualizedConv2d(channel_evolution[i], 3, 1, 1, 0))
+                    outs.append(EqualizedConv2d(channel_evolution[i], 3, 1, 1, 0))
             self.bs = chainer.ChainList(*bs)
             self.outs = chainer.ChainList(*outs)
 
@@ -63,7 +63,6 @@ class ProgressiveGenerator(chainer.Chain):
         # stage3: c0->c1->b1-> (1-a)*(up->out1) + (a)*(b2->out2)
         # stage4: c0->c1->b2->out2
         # ...
-
         if stage is None:
             stage = self.max_stage
         stage = min(stage, self.max_stage)
@@ -72,35 +71,31 @@ class ProgressiveGenerator(chainer.Chain):
 
         h = chainer.functions.reshape(z, (len(z), self.n_hidden, 1, 1))
         h = chainer.functions.leaky_relu(feature_vector_normalization(self.c0(h)))
+        h = chainer.functions.leaky_relu(feature_vector_normalization(self.c1(h)))
         if skip_hs is not None:
             h = chainer.functions.concat([h, skip_hs[-1]], axis=1)
-        h = chainer.functions.leaky_relu(feature_vector_normalization(self.c1(h)))
 
         for i in range(1, int(stage // 2 + 1)):
+            h = self.bs[i](h)
             if skip_hs is not None:  # conditional
                 h = chainer.functions.concat([h, skip_hs[-1 - i]], axis=1)
-            h = self.bs[i](h)
 
         if int(stage) % 2 == 0:
-            # out = getattr(self, "out%d"%(stage//2))
             out = self.outs[int(stage // 2)]
             x = out(h)
         else:
-            # out_prev = getattr(self, "out%d"%(stage//2))
             out_prev = self.outs[stage // 2]
-            # out_curr = getattr(self, "out%d"%(stage//2+1))
             out_curr = self.outs[stage // 2 + 1]
-            # b_curr = getattr(self, "b%d"%(stage//2+1))
             b_curr = self.bs[stage // 2 + 1]
 
             x_0 = out_prev(chainer.functions.unpooling_2d(h, 2, 2, 0, outsize=(2 * h.shape[2], 2 * h.shape[3])))
-            x_1 = out_curr(b_curr(h))
+            h = b_curr(h)
+            if skip_hs is not None:  # conditional
+                skip_hs_original = skip_hs[-1 - int(stage // 2 + 1)]
+                skip_hs_unpool = chainer.functions.unpooling_2d(
+                    skip_hs_original, 2, 2, 0, outsize=(2 * skip_hs_original.shape[2], 2 * skip_hs_original.shape[3]))
+                h = chainer.functions.concat([h, skip_hs_unpool], axis=1)
+            x_1 = out_curr(h)
             x = (1.0 - alpha) * x_0 + alpha * x_1
 
         return x
-        # if chainer.configuration.config.train:
-        #     return x
-        # else:
-        #     # scale = int(test_resolution // x.data.shape[2])
-        #     scale = 1
-        #     return chainer.functions.unpooling_2d(x, scale, scale, 0, outsize=(test_resolution, test_resolution))
