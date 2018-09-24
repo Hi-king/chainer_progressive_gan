@@ -1,7 +1,21 @@
-import cv2
+import json
 import os
 
+import cv2
 import numpy
+
+
+class FaceMeta(object):
+    def __init__(self, x, y, width, height, image_width, image_height):
+        self.image_height = image_height
+        self.image_width = image_width
+        self.height = height
+        self.width = width
+        self.y = y
+        self.x = x
+
+    def to_json(self):
+        return json.dumps({k:int(v) for k, v in self.__dict__.items()})
 
 
 class FaceExtractor(object):
@@ -12,7 +26,7 @@ class FaceExtractor(object):
         self.classifier = cv2.CascadeClassifier(cascade_file)
         self.margin = margin
 
-    def extract(self, img_file):
+    def extract_meta(self, img_file):
         target_img = cv2.imread(img_file)
         gray_img = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
         gray_img_preprocessed = cv2.equalizeHist(gray_img)
@@ -23,17 +37,19 @@ class FaceExtractor(object):
             minSize=(24, 24))
         if len(faces) == 0:
             raise (Exception("Could not find face from img"))
-
-        x, y, width, height = faces[0]
         image_width, image_height, _ = target_img.shape
+        return FaceMeta(*faces[0], image_height=image_height, image_width=image_width)
+
+    def extract(self, img_file):
+        meta = self.extract_meta(img_file)
+        target_img = cv2.imread(img_file)
         margin = int(min(
-            y, image_height - y - width,
-            x, image_width - x - width,
-               width * self.margin
+            meta.y, meta.image_height - meta.y - meta.width,
+            meta.x, meta.image_width - meta.x - meta.width,
+                    meta.width * self.margin
         ))
-        print(y - margin,y + height + margin, x - margin, x + width + margin)
         rgb_img = cv2.cvtColor(cv2.resize(
-            target_img[y - margin:y + height + margin, x - margin:x + width + margin],
+            target_img[y - margin:meta.y + meta.height + margin, meta.x - margin:meta.x + meta.width + margin],
             (128, 128),
             # interpolation=cv2.INTER_LANCZOS4
             # interpolation=cv2.INTER_NEAREST,
