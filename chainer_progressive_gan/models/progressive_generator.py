@@ -20,7 +20,10 @@ class ProgressiveGenerator(chainer.Chain):
         self.max_stage = (len(channel_evolution) - 1) * 2
         with self.init_scope():
             self.c0 = EqualizedConv2d(n_hidden, ch, 4, 1, 3)
-            self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
+            if conditional:
+                self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
+            else:
+                self.c1 = EqualizedConv2d(ch, ch, 3, 1, 1)
             bs = [
                 chainer.Link()  # dummy
             ]
@@ -28,14 +31,14 @@ class ProgressiveGenerator(chainer.Chain):
 
             ]
             if conditional:
-                outs.append(EqualizedConv2d(channel_evolution[0] * 2, 3, 1, 1, 0))
+                outs.append(EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0))
             else:
                 outs.append(EqualizedConv2d(channel_evolution[0], 3, 1, 1, 0))
 
             for i in range(1, len(channel_evolution)):
                 if conditional:
-                    bs.append(GeneratorBlock(channel_evolution[i - 1] * 2, channel_evolution[i]))
-                    outs.append(EqualizedConv2d(channel_evolution[i] * 2, 3, 1, 1, 0))
+                    bs.append(GeneratorBlock(channel_evolution[i - 1]*2, channel_evolution[i]))
+                    outs.append(EqualizedConv2d(channel_evolution[i], 3, 1, 1, 0))
                 else:
                     bs.append(GeneratorBlock(channel_evolution[i - 1], channel_evolution[i]))
                     outs.append(EqualizedConv2d(channel_evolution[i], 3, 1, 1, 0))
@@ -71,17 +74,23 @@ class ProgressiveGenerator(chainer.Chain):
 
         h = chainer.functions.reshape(z, (len(z), self.n_hidden, 1, 1))
         h = chainer.functions.leaky_relu(feature_vector_normalization(self.c0(h)))
+        # if skip_hs is not None:
+        #     print("hs:", -1)
+        #     print(h.shape, skip_hs[-1].shape)
+        #     h = chainer.functions.concat([h, skip_hs[-1]], axis=1)
         h = chainer.functions.leaky_relu(feature_vector_normalization(self.c1(h)))
-        if skip_hs is not None:
-            h = chainer.functions.concat([h, skip_hs[-1]], axis=1)
 
         for i in range(1, int(stage // 2 + 1)):
-            h = self.bs[i](h)
+            # print(h.shape)
             if skip_hs is not None:  # conditional
-                h = chainer.functions.concat([h, skip_hs[-1 - i]], axis=1)
+                # print("hs:", -1 - i)
+                # print(h.shape, skip_hs[- i].shape)
+                h = chainer.functions.concat([h, skip_hs[- i]], axis=1)
+            h = self.bs[i](h)
 
         if int(stage) % 2 == 0:
             out = self.outs[int(stage // 2)]
+            # print(h.shape)
             x = out(h)
         else:
             out_prev = self.outs[stage // 2]
@@ -89,12 +98,22 @@ class ProgressiveGenerator(chainer.Chain):
             b_curr = self.bs[stage // 2 + 1]
 
             x_0 = out_prev(chainer.functions.unpooling_2d(h, 2, 2, 0, outsize=(2 * h.shape[2], 2 * h.shape[3])))
-            h = b_curr(h)
+            # print(h.shape)
+            # for hh in skip_hs:
+            #     print(hh.shape)
             if skip_hs is not None:  # conditional
-                skip_hs_original = skip_hs[-1 - int(stage // 2 + 1)]
-                skip_hs_unpool = chainer.functions.unpooling_2d(
-                    skip_hs_original, 2, 2, 0, outsize=(2 * skip_hs_original.shape[2], 2 * skip_hs_original.shape[3]))
-                h = chainer.functions.concat([h, skip_hs_unpool], axis=1)
+                # print("hs:", -1 - int(stage // 2 + 1))
+                # skip_hs_original = skip_hs[-1 - int(stage // 2 + 1)]
+                skip_hs_original = skip_hs[- int(stage // 2 + 1)]
+                # skip_hs_unpool = chainer.functions.unpooling_2d(
+                #     skip_hs_original, 2, 2, 0, outsize=(2 * skip_hs_original.shape[2], 2 * skip_hs_original.shape[3]))
+                # print(h.shape, skip_hs_unpool.shape, x_0.shape)
+                # print(h.shape, skip_hs_original.shape)
+                h = chainer.functions.concat([h, skip_hs_original], axis=1)
+            # print(h.shape)
+            h = b_curr(h)
+            # h = b_curr(h)
+            # print(h.shape)
             x_1 = out_curr(h)
             x = (1.0 - alpha) * x_0 + alpha * x_1
 

@@ -30,7 +30,7 @@ class ProgressiveVectorizer(chainer.Chain):
             self.ins = chainer.ChainList(*ins)
             self.bs = chainer.ChainList(*bs)
 
-    def __call__(self, x, stage):
+    def _c(self, x, stage):
         # stage0: in0->m_std->out0_0->out0_1->out0_2
         # stage1: (1-a)*(down->in0) + (a)*(in1->b1) ->m_std->out0->out1->out2
         # stage2: in1->b1->m_std->out0_0->out0_1->out0_2
@@ -38,6 +38,7 @@ class ProgressiveVectorizer(chainer.Chain):
         # stage4: in2->b2->b1->m_std->out0->out1->out2
         # ...
 
+        # print(stage)
         stage = min(stage, self.max_stage)
         alpha = stage - math.floor(stage)
         stage = math.floor(stage)
@@ -51,17 +52,20 @@ class ProgressiveVectorizer(chainer.Chain):
             fromRGB0 = self.ins[stage // 2]
             fromRGB1 = self.ins[stage // 2 + 1]
             b1 = self.bs[int(stage // 2 + 1)]
-
             h0 = chainer.functions.leaky_relu(
                 fromRGB0(self.pooling_comp * chainer.functions.average_pooling_2d(x, 2, 2, 0)))
-            hs.append(h0)
-            h1 = b1(chainer.functions.leaky_relu(fromRGB1(x)))
-            hs.append(h1)
+            # hs.append(h0)
+            h1 = chainer.functions.leaky_relu(fromRGB1(x))
+            h1 = b1(h1)
             h = (1 - alpha) * h0 + alpha * h1
+            hs.append(h)
         for i in range(int(stage // 2), 0, -1):
             h = self.bs[i](h)
             hs.append(h)
-        return hs
+        return hs, h
+
+    def __call__(self, x, stage):
+        return self._c(x, stage)[0]
 
 
 class ProgressiveDiscriminator(ProgressiveVectorizer):
@@ -74,7 +78,7 @@ class ProgressiveDiscriminator(ProgressiveVectorizer):
             self.out2 = EqualizedLinear(ch, 1)
 
     def __call__(self, x, stage):
-        h = super().__call__(x, stage)[-1]
+        h = super()._c(x, stage)[1]
         h = minibatch_std(h)
         h = chainer.functions.leaky_relu((self.out0(h)))
         h = chainer.functions.leaky_relu((self.out1(h)))

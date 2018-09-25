@@ -34,6 +34,7 @@ def main(args: argparse.Namespace):
         channel_evolution = (512, 512, 512, 512, 256, 128)
     elif args.resize == 256:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
+        channel_evolution = (512, 256, 128, 64, 32, 16, 8)  # too much memory
         # channel_evolution = (512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 512:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
@@ -52,7 +53,7 @@ def main(args: argparse.Namespace):
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
     dataset = chainer_progressive_gan.datasets.FaceBlendedDataset(
         list(args.dataset_directory.glob("*.png")),
-        resize=(args.resize, args.resize))
+        resize=(args.resize, args.resize), gray=args.gray_condition)
     train_iter = chainer.iterators.SerialIterator(dataset, args.batchsize)
 
     # select GPU
@@ -125,6 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
     parser.add_argument('--resize', type=int, default=32)
+    parser.add_argument('--gray_condition', action=argparse._StoreTrueAction)
     parser.add_argument('--batchsize', '-b', type=int, default=16)
     parser.add_argument('--max_iter', '-m', type=int, default=4000000)
 

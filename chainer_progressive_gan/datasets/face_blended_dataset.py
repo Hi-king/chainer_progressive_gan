@@ -15,7 +15,8 @@ import chainer_progressive_gan
 
 
 class FaceBlendedDataset(dataset_mixin.DatasetMixin):
-    def __init__(self, paths: List[Path], resize=None):
+    def __init__(self, paths: List[Path], resize=None, gray=False):
+        self.gray = gray
         self.resize = resize
         self.paths = paths
 
@@ -37,15 +38,18 @@ class FaceBlendedDataset(dataset_mixin.DatasetMixin):
         image[face_meta.y:face_meta.y + face_meta.height, face_meta.x:face_meta.x + face_meta.width] = 0
 
         # subface
+        target_image = cv2.cvtColor(cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR) if self.gray else original_image
         image[
         face_meta.y + int(margin * face_meta.height):
         face_meta.y + face_meta.height - int(margin * face_meta.height),
         face_meta.x + int(margin * face_meta.width):
-        face_meta.x + face_meta.width - int(margin * face_meta.height)] = original_image[
-                                                                          face_meta.y + int(margin * face_meta.height):
+        face_meta.x + face_meta.width - int(margin * face_meta.height)] = target_image[
+                                                                          face_meta.y + int(
+                                                                              margin * face_meta.height):
                                                                           face_meta.y + face_meta.height - int(
                                                                               margin * face_meta.height),
-                                                                          face_meta.x + int(margin * face_meta.width):
+                                                                          face_meta.x + int(
+                                                                              margin * face_meta.width):
                                                                           face_meta.x + face_meta.width - int(
                                                                               margin * face_meta.height)]
         if self.resize is None:
