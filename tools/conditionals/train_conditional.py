@@ -1,10 +1,9 @@
 import argparse
 import pathlib
-
-import chainer
 import sys
-import cv2
 import time
+import pipe
+import chainer
 
 thisfilepath = pathlib.Path(__file__)
 sys.path.append(str(thisfilepath.parent.parent))
@@ -14,14 +13,16 @@ import chainer_gan_lib.common.misc
 import train
 
 
-def main(args: argparse.Namespace):
-    result_directory_name = "_".join([
-        "resize{}".format(args.resize),
-        "stage{}".format(args.initial_stage),
-        "batch{}".format(args.batchsize),
-        "stginterval{}".format(args.stage_interval),
-        str(int(time.time())),
-    ])
+def main(args: argparse.Namespace, dataset):
+    result_directory_name = "_".join(
+        [
+            args.prefix,
+            "resize{}".format(args.resize),
+            "stage{}".format(args.initial_stage),
+            "batch{}".format(args.batchsize),
+            "stginterval{}".format(args.stage_interval),
+            str(int(time.time())),
+        ] | pipe.where(lambda x: len(x) > 0))
     result_directory = args.out / result_directory_name
     chainer_gan_lib.common.record.record_setting(str(result_directory))
 
@@ -33,9 +34,9 @@ def main(args: argparse.Namespace):
     elif args.resize == 128:
         channel_evolution = (512, 512, 512, 512, 256, 128)
     elif args.resize == 256:
-        channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
-        channel_evolution = (512, 256, 128, 64, 32, 16, 8)  # too much memory
-        # channel_evolution = (512, 512, 512, 256, 128, 64, 32)
+        # channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
+        # channel_evolution = (512, 256, 128, 64, 32, 16, 8)  # too much memory
+        channel_evolution = (512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 512:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 1024:
@@ -51,9 +52,6 @@ def main(args: argparse.Namespace):
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, conditional=True)
     vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
-    dataset = chainer_progressive_gan.datasets.FaceBlendedDataset(
-        list(args.dataset_directory.glob("*.png")),
-        resize=(args.resize, args.resize), gray=args.gray_condition)
     train_iter = chainer.iterators.SerialIterator(dataset, args.batchsize)
 
     # select GPU
@@ -91,7 +89,7 @@ def main(args: argparse.Namespace):
         stage_interval=args.stage_interval
     )
     report_keys = ["stage", "loss_dis", "loss_gp", "loss_gen", "g", "inception_mean", "inception_std", "FID"]
-    trainer = chainer.training.Trainer(updater, (args.max_iter, 'iteration'), out=result_directory)
+    trainer = chainer.training.Trainer(updater, (args.max_iter, 'iteration'), out=str(result_directory))
     trainer.extend(chainer.training.extensions.snapshot_object(
         generator, 'generator_{.updater.iteration}.npz'), trigger=(args.snapshot_interval, 'iteration'))
     trainer.extend(chainer.training.extensions.snapshot_object(
@@ -120,9 +118,7 @@ def main(args: argparse.Namespace):
     trainer.run()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('dataset_directory', type=pathlib.Path)
+def shared_args(parser):
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
     parser.add_argument('--resize', type=int, default=32)
@@ -131,6 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_iter', '-m', type=int, default=4000000)
 
     # optional
+    parser.add_argument("--prefix")
     parser.add_argument('--out', '-o', default="result",
                         help='Directory to output the result', type=pathlib.Path)
     parser.add_argument('--snapshot_interval', type=int, default=5000,
@@ -155,5 +152,3 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_discriminator', type=str, default="")
     parser.add_argument('--pooling_comp', type=float, default=1.0,
                         help='compensation')
-    args = parser.parse_args()
-    main(args)
