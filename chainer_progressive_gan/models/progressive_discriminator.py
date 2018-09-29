@@ -59,7 +59,6 @@ class ProgressiveVectorizer(chainer.Chain):
             b1 = self.bs[int(stage // 2 + 1)]
             h0 = chainer.functions.leaky_relu(
                 fromRGB0(self.pooling_comp * chainer.functions.average_pooling_2d(x, 2, 2, 0)))
-            # hs.append(h0)
             h1 = chainer.functions.leaky_relu(fromRGB1(x))
             h1 = b1(h1)
             h = (1 - alpha) * h0 + alpha * h1

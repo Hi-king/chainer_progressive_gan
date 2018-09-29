@@ -45,13 +45,6 @@ class ProgressiveGenerator(chainer.Chain):
             self.bs = chainer.ChainList(*bs)
             self.outs = chainer.ChainList(*outs)
 
-            # self.b1 = GeneratorBlock(ch, ch)
-            # self.out1 = EqualizedConv2d(ch, 3, 1, 1, 0)
-            # self.b2 = GeneratorBlock(ch, ch)
-            # self.out2 = EqualizedConv2d(ch, 3, 1, 1, 0)
-            # self.b3 = GeneratorBlock(ch, ch//2)
-            # self.out3 = EqualizedConv2d(ch//2, 3, 1, 1, 0)
-
     def make_hidden(self, batchsize):
         xp = self.xp
         z = xp.random.normal(size=(batchsize, self.n_hidden, 1, 1)) \
@@ -96,15 +89,9 @@ class ProgressiveGenerator(chainer.Chain):
 
             x_0 = out_prev(chainer.functions.unpooling_2d(h, 2, 2, 0, outsize=(2 * h.shape[2], 2 * h.shape[3])))
             if skip_hs is not None:  # conditional
-                # skip_hs_original = skip_hs[-1 - int(stage // 2 + 1)]
                 skip_hs_original = skip_hs[- int(stage // 2 + 1)]
-                # skip_hs_unpool = chainer.functions.unpooling_2d(
-                #     skip_hs_original, 2, 2, 0, outsize=(2 * skip_hs_original.shape[2], 2 * skip_hs_original.shape[3]))
                 h = chainer.functions.concat([h, skip_hs_original], axis=1)
-            # print(h.shape)
             h = b_curr(h)
-            # h = b_curr(h)
-            # print(h.shape)
             x_1 = out_curr(h)
             x = (1.0 - alpha) * x_0 + alpha * x_1
 
