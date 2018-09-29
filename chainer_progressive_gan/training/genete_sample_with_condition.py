@@ -57,6 +57,7 @@ class GenerateSampleWithCondition(chainer.training.extension.Extension):
             xs.append(x)
             ys.append(y)
         x_var = chainer.Variable(xp.array(xs))
+        y_var = chainer.Variable(numpy.array(ys))
         x_var = self._resize(trainer.updater.stage, x_var)
         z = chainer.Variable(xp.asarray(self.generator.make_hidden(n_images)))
         with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
@@ -67,3 +68,4 @@ class GenerateSampleWithCondition(chainer.training.extension.Extension):
             self.output_dir.mkdir()
         cv2.imwrite(str(self.output_dir / 'image_result_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(x))
         cv2.imwrite(str(self.output_dir / 'image_condition_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(x_var))
+        cv2.imwrite(str(self.output_dir / 'image_ground_truth_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(y_var))

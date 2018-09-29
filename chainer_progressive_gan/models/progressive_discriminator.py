@@ -12,8 +12,10 @@ class ProgressiveVectorizer(chainer.Chain):
     """
 
     def __init__(self, ch=512, pooling_comp=1.0,
-                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False):
+                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False,
+                 use_both_conditional_and_latent=False):
         super().__init__()
+        self.use_both_conditional_and_latent = use_both_conditional_and_latent
         self.max_stage = (len(channel_evolution) - 1) * 2
         self.pooling_comp = pooling_comp  # compensation of ave_pool is 0.5-Lipshitz
         first_channel = 6 if conditional else 3
@@ -29,6 +31,9 @@ class ProgressiveVectorizer(chainer.Chain):
                 bs.append(DiscriminatorBlock(channel_evolution[i], channel_evolution[i - 1], pooling_comp))
             self.ins = chainer.ChainList(*ins)
             self.bs = chainer.ChainList(*bs)
+            self.out0 = EqualizedConv2d(ch + 1, ch, 3, 1, 1)
+            self.out1 = EqualizedConv2d(ch, ch, 4, 1, 0)
+            self.out2 = EqualizedLinear(ch, 1)
 
     def _c(self, x, stage):
         # stage0: in0->m_std->out0_0->out0_1->out0_2
@@ -62,24 +67,21 @@ class ProgressiveVectorizer(chainer.Chain):
         for i in range(int(stage // 2), 0, -1):
             h = self.bs[i](h)
             hs.append(h)
-        return hs, h
-
-    def __call__(self, x, stage):
-        return self._c(x, stage)[0]
-
-
-class ProgressiveDiscriminator(ProgressiveVectorizer):
-    def __init__(self, ch=512, pooling_comp=1.0,
-                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False):
-        super().__init__(ch=ch, pooling_comp=pooling_comp, channel_evolution=channel_evolution, conditional=conditional)
-        with self.init_scope():
-            self.out0 = EqualizedConv2d(ch + 1, ch, 3, 1, 1)
-            self.out1 = EqualizedConv2d(ch, ch, 4, 1, 0)
-            self.out2 = EqualizedLinear(ch, 1)
-
-    def __call__(self, x, stage):
-        h = super()._c(x, stage)[1]
         h = minibatch_std(h)
         h = chainer.functions.leaky_relu((self.out0(h)))
         h = chainer.functions.leaky_relu((self.out1(h)))
-        return self.out2(h)
+        hs.append(h)
+        h = self.out2(h)
+        hs.append(h)
+        return hs
+
+    def __call__(self, x, stage):
+        if self.use_both_conditional_and_latent:
+            return self._c(x, stage)[:-2]
+        else:
+            return self._c(x, stage)[:-1]
+
+
+class ProgressiveDiscriminator(ProgressiveVectorizer):
+    def __call__(self, x, stage):
+        return super()._c(x, stage)[-1]

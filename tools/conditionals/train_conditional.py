@@ -21,6 +21,7 @@ def main(args: argparse.Namespace, dataset):
             "stage{}".format(args.initial_stage),
             "batch{}".format(args.batchsize),
             "stginterval{}".format(args.stage_interval),
+            "latent{}".format("ON" if args.use_latent else "OFF"),
             str(int(time.time())),
         ] | pipe.where(lambda x: len(x) > 0))
     result_directory = args.out / result_directory_name
@@ -34,8 +35,6 @@ def main(args: argparse.Namespace, dataset):
     elif args.resize == 128:
         channel_evolution = (512, 512, 512, 512, 256, 128)
     elif args.resize == 256:
-        # channel_evolution = (512, 512, 512, 512, 256, 128, 64)  # too much memory
-        # channel_evolution = (512, 256, 128, 64, 32, 16, 8)  # too much memory
         channel_evolution = (512, 512, 512, 256, 128, 64, 32)
     elif args.resize == 512:
         channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
@@ -51,7 +50,8 @@ def main(args: argparse.Namespace, dataset):
     discriminator = chainer_progressive_gan.models.ProgressiveDiscriminator(
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, conditional=True)
     vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution)
+        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution,
+        use_both_conditional_and_latent=args.use_latent)
     train_iter = chainer.iterators.SerialIterator(dataset, args.batchsize)
 
     # select GPU
@@ -125,6 +125,7 @@ def shared_args(parser):
     parser.add_argument('--gray_condition', action=argparse._StoreTrueAction)
     parser.add_argument('--batchsize', '-b', type=int, default=16)
     parser.add_argument('--max_iter', '-m', type=int, default=4000000)
+    parser.add_argument('--use_latent', action=argparse._StoreTrueAction)
 
     # optional
     parser.add_argument("--prefix")
