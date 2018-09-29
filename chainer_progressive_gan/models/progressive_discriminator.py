@@ -12,13 +12,12 @@ class ProgressiveVectorizer(chainer.Chain):
     """
 
     def __init__(self, ch=512, pooling_comp=1.0,
-                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), conditional=False,
+                 channel_evolution=(512, 512, 512, 512, 256, 128, 64, 32, 16), first_channel=3,
                  use_both_conditional_and_latent=False):
         super().__init__()
         self.use_both_conditional_and_latent = use_both_conditional_and_latent
         self.max_stage = (len(channel_evolution) - 1) * 2
         self.pooling_comp = pooling_comp  # compensation of ave_pool is 0.5-Lipshitz
-        first_channel = 6 if conditional else 3
         with self.init_scope():
             ins = [
                 EqualizedConv2d(first_channel, channel_evolution[0], 1, 1, 0)
@@ -43,7 +42,6 @@ class ProgressiveVectorizer(chainer.Chain):
         # stage4: in2->b2->b1->m_std->out0->out1->out2
         # ...
 
-        # print(stage)
         stage = min(stage, self.max_stage)
         alpha = stage - math.floor(stage)
         stage = math.floor(stage)

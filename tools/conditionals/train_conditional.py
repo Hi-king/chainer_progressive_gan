@@ -48,11 +48,11 @@ def main(args: argparse.Namespace, dataset):
     generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
         channel_evolution=channel_evolution, conditional=True)
     discriminator = chainer_progressive_gan.models.ProgressiveDiscriminator(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, conditional=True)
+        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel+3)
     vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution,
+        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel,
         use_both_conditional_and_latent=args.use_latent)
-    train_iter = chainer.iterators.SerialIterator(dataset, args.batchsize)
+    train_iter = chainer.iterators.MultiprocessIterator(dataset, args.batchsize)
 
     # select GPU
     if args.gpu >= 0:
@@ -129,6 +129,7 @@ def shared_args(parser):
 
     # optional
     parser.add_argument("--prefix")
+    parser.add_argument('--input_channel', type=int, default=3)
     parser.add_argument('--out', '-o', default="result",
                         help='Directory to output the result', type=pathlib.Path)
     parser.add_argument('--snapshot_interval', type=int, default=5000,

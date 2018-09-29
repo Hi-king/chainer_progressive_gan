@@ -40,6 +40,7 @@ class GenerateSampleWithCondition(chainer.training.extension.Extension):
 
     def _tiling(self, x:chainer.Variable):
         x = chainer.cuda.to_cpu(x.data)
+        x = x[:, :3, :, :]
         x = numpy.asarray(numpy.clip(x * 127.5 + 127.5, 0.0, 255.0), dtype=numpy.uint8)
         _, _, h, w = x.shape
         x = x.reshape((self.rows, self.cols, 3, h, w))
