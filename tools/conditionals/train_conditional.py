@@ -48,11 +48,11 @@ def main(args: argparse.Namespace, dataset):
     generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
         channel_evolution=channel_evolution, conditional=True)
     discriminator = chainer_progressive_gan.models.ProgressiveDiscriminator(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel+3)
+        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel + 3)
     vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
         pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel,
         use_both_conditional_and_latent=args.use_latent)
-    train_iter = chainer.iterators.MultiprocessIterator(dataset, args.batchsize)
+    train_iter = chainer.iterators.MultithreadIterator(dataset, args.batchsize)
 
     # select GPU
     if args.gpu >= 0:
@@ -96,6 +96,8 @@ def main(args: argparse.Namespace, dataset):
         generator_smooth, 'generator_smooth_{.updater.iteration}.npz'), trigger=(args.snapshot_interval, 'iteration'))
     trainer.extend(chainer.training.extensions.snapshot_object(
         discriminator, 'discriminator_{.updater.iteration}.npz'), trigger=(args.snapshot_interval, 'iteration'))
+    trainer.extend(chainer.training.extensions.snapshot_object(
+        vectorizer, 'vectorizer_{.updater.iteration}.npz'), trigger=(args.snapshot_interval, 'iteration'))
 
     trainer.extend(chainer.training.extensions.LogReport(keys=report_keys,
                                                          trigger=(args.display_interval, 'iteration')))
