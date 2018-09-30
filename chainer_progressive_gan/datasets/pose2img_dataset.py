@@ -44,7 +44,8 @@ class Market1501Dataset(dataset_mixin.DatasetMixin):
 
     @staticmethod
     def read_image(path):
-        return numpy.asarray(Image.open(path), dtype=numpy.float32)[:, :, :3]
+        return cv2.imread(path)[:, :, :3]
+        # return numpy.asarray(Image.open(path), dtype=numpy.float32)[:, :, :3]
 
     @staticmethod
     def resize_pose_with_reference(image, pose, need_shift=False):
@@ -68,10 +69,6 @@ class Market1501Dataset(dataset_mixin.DatasetMixin):
 
         return resized_pose[:, h_start:h_start + w, :]
 
-    @staticmethod
-    def normalize(data):
-        return (data - 128) / 128
-
     def get_img_pose(self, image_path):
         basename = os.path.basename(image_path)
         pose_path = os.path.join(
@@ -81,7 +78,7 @@ class Market1501Dataset(dataset_mixin.DatasetMixin):
         image = self.read_image(image_path)
         pose = self.read_image(pose_path)
         pose = self.resize_pose_with_reference(image, pose)
-        return self.normalize(image), self.normalize(pose)
+        return image, pose
 
     def _todata(self, image):
-        return image.transpose(2, 0, 1)
+        return (image.transpose(2, 0, 1).astype(numpy.float32) - 128) / 128
