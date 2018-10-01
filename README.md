@@ -19,18 +19,26 @@ image.save("test.png")
 ```
 
 
-## Re-training
+### Re-training
 
 ```
 python train.py --gpu=1 --resize 256 your/dataset/path
 ```
 
-## Result
+### Result
 
 Stage-by-Stage animation
 
 ![](https://raw.githubusercontent.com/Hi-king/chainer_progressive_gan/master/sample/preview.gif)
 
+
+## Conditional Image Generation
+
+### sketch2img
+
+```
+python tools/conditionals/edge2img/predict_edge2img.py --input_image signico_face.png --vectorizer result/edge2img_resize256_stage0.0_batch16_stginterval500000_latentON_1538310505/vectorizer_280000.npz --generator result/edge2img_resize256_stage0.0_batch16_stginterval500000_latentON_1538310505/generator_280000.npz --stage 8 --to_line --use_latent
+```
 
 ## Acknowledgements
 

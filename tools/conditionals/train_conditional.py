@@ -10,6 +10,7 @@ sys.path.append(str(thisfilepath.parent.parent))
 import chainer_progressive_gan
 import chainer_gan_lib.common.record
 import chainer_gan_lib.common.misc
+import tools
 import train
 
 
@@ -29,29 +30,34 @@ def main(args: argparse.Namespace, dataset):
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
+    generator, generator_smooth, discriminator, vectorizer = tools.load_models(
+        resize=args.resize, use_latent=args.use_latent,
+        input_channel=args.input_channel,
+        pretrained_generator=args.pretrained_generator,
+        pretrained_vectorizer=args.pretrained_vectorizer)
 
-    if args.resize == 32:
-        channel_evolution = (512, 512, 512, 256)
-    elif args.resize == 128:
-        channel_evolution = (512, 512, 512, 512, 256, 128)
-    elif args.resize == 256:
-        channel_evolution = (512, 512, 512, 256, 128, 64, 32)
-    elif args.resize == 512:
-        channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
-    elif args.resize == 1024:
-        channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32, 16)
-    else:
-        raise Exception()
-
-    generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
-        channel_evolution=channel_evolution, conditional=True)
-    generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
-        channel_evolution=channel_evolution, conditional=True)
-    discriminator = chainer_progressive_gan.models.ProgressiveDiscriminator(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel + 3)
-    vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
-        pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel,
-        use_both_conditional_and_latent=args.use_latent)
+    # if args.resize == 32:
+    #     channel_evolution = (512, 512, 512, 256)
+    # elif args.resize == 128:
+    #     channel_evolution = (512, 512, 512, 512, 256, 128)
+    # elif args.resize == 256:
+    #     channel_evolution = (512, 512, 512, 256, 128, 64, 32)
+    # elif args.resize == 512:
+    #     channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32)
+    # elif args.resize == 1024:
+    #     channel_evolution = (512, 512, 512, 512, 256, 128, 64, 32, 16)
+    # else:
+    #     raise Exception()
+    #
+    # generator = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
+    #     channel_evolution=channel_evolution, conditional=True)
+    # generator_smooth = chainer_progressive_gan.models.progressive_generator.ProgressiveGenerator(
+    #     channel_evolution=channel_evolution, conditional=True)
+    # discriminator = chainer_progressive_gan.models.ProgressiveDiscriminator(
+    #     pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel + 3)
+    # vectorizer = chainer_progressive_gan.models.ProgressiveVectorizer(
+    #     pooling_comp=args.pooling_comp, channel_evolution=channel_evolution, first_channel=args.input_channel,
+    #     use_both_conditional_and_latent=args.use_latent)
     train_iter = chainer.iterators.MultithreadIterator(dataset, args.batchsize)
 
     # select GPU
@@ -62,10 +68,6 @@ def main(args: argparse.Namespace, dataset):
         vectorizer.to_gpu()
         print("use gpu {}".format(args.gpu))
 
-    if args.pretrained_generator != "":
-        chainer.serializers.load_npz(args.pretrained_generator, generator)
-    if args.pretrained_discriminator != "":
-        chainer.serializers.load_npz(args.pretrained_discriminator, discriminator)
     chainer_gan_lib.common.misc.copy_param(generator_smooth, generator)
     opt_gen = train.make_optimizer(generator)
     opt_dis = train.make_optimizer(discriminator)
