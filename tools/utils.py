@@ -1,4 +1,6 @@
 import chainer
+import numpy
+
 import chainer_progressive_gan
 
 
@@ -45,3 +47,20 @@ def load_models(resize, use_latent: bool, pooling_comp: float = 1.0, input_chann
         vectorizer.to_gpu()
         print("use gpu {}".format(gpu))
     return generator, generator_smooth, discriminator, vectorizer
+
+
+def predict(image, resize, stage, vectorizer, generator):
+    image_var = chainer.Variable(image[numpy.newaxis, :, :, :])
+
+    current_resize = min(resize, 4 * 2 ** (stage // 2))
+    scale = resize // current_resize
+    image_var = chainer.functions.average_pooling_2d(image_var, scale, scale, 0)
+    # image = (image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5).astype(numpy.uint8)
+
+    with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
+        z = chainer.Variable(numpy.asarray(generator.make_hidden(1)))
+        condition = vectorizer(image_var, stage=stage)
+        result_image_var = generator(z, stage=stage, skip_hs=condition)
+        result_image = (result_image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5)
+        result_image = numpy.clip(result_image, 0.0, 255.0).astype(numpy.uint8)
+        return result_image

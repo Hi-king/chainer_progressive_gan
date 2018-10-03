@@ -1,15 +1,12 @@
 import argparse
-import cv2
 import pathlib
 import sys
-import pipe
-import glob
-import chainer
+
+import cv2
 import numpy
 
 thisfilepath = pathlib.Path(__file__)
 sys.path.append(str(thisfilepath.parents[3]))
-import chainer_progressive_gan
 import tools
 
 
@@ -28,23 +25,9 @@ def main(args: argparse.Namespace):
 
     image = image.astype(numpy.float32).transpose((2, 0, 1))
     image = (image - 127.5) / 127.5
-    image_var = chainer.Variable(image[numpy.newaxis, :, :, :])
 
-
-    current_resize = min(args.resize, 4 * 2 ** (args.stage // 2))
-    scale = args.resize // current_resize
-    image_var = chainer.functions.average_pooling_2d(image_var, scale, scale, 0)
-    image = (image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5).astype(numpy.uint8)
-    cv2.imwrite("line.png", image)
-
-
-    with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
-        z = chainer.Variable(numpy.asarray(generator.make_hidden(1)))
-        condition = vectorizer(image_var, stage=args.stage)
-        result_image_var = generator(z, stage=args.stage, skip_hs=condition)
-        result_image = (result_image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5)
-        result_image = numpy.clip(result_image, 0.0, 255.0).astype(numpy.uint8)
-        cv2.imwrite("result.png", result_image)
+    result_image = tools.utils.predict(image, args.resize, args.stage, vectorizer, generator)
+    cv2.imwrite("result.png", result_image)
 
 
 if __name__ == '__main__':
