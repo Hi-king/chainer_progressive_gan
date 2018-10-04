@@ -1,3 +1,5 @@
+import cv2
+
 import chainer
 import numpy
 
@@ -50,12 +52,18 @@ def load_models(resize, use_latent: bool, pooling_comp: float = 1.0, input_chann
 
 
 def predict(image, resize, stage, vectorizer, generator):
+    image = cv2.resize(image, (resize, resize))
+    cv2.imwrite("input.png", image)
+    image = image.astype(numpy.float32).transpose((2, 0, 1))
+    image = (image - 127.5) / 127.5
+
     image_var = chainer.Variable(image[numpy.newaxis, :, :, :])
 
-    current_resize = min(resize, 4 * 2 ** (stage // 2))
+    current_resize = min(resize, 4 * 2 ** ((stage + 1) // 2))
     scale = resize // current_resize
     image_var = chainer.functions.average_pooling_2d(image_var, scale, scale, 0)
     # image = (image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5).astype(numpy.uint8)
+    print(image_var.shape)
 
     with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
         z = chainer.Variable(numpy.asarray(generator.make_hidden(1)))

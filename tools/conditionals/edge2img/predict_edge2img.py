@@ -16,15 +16,12 @@ def main(args: argparse.Namespace):
                                                     pretrained_vectorizer=args.vectorizer)
     image = cv2.imread(str(args.input_image))
     image = cv2.resize(image, (args.resize, args.resize))
-
     if args.to_line:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         kernel = numpy.ones((3, 3), numpy.uint8)
         image = cv2.dilate(gray, kernel=kernel) - gray
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-
-    image = image.astype(numpy.float32).transpose((2, 0, 1))
-    image = (image - 127.5) / 127.5
+        cv2.imwrite("line.png", image)
 
     result_image = tools.utils.predict(image, args.resize, args.stage, vectorizer, generator)
     cv2.imwrite("result.png", result_image)
