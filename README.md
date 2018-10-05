@@ -40,6 +40,10 @@ Stage-by-Stage animation
 python tools/conditionals/edge2img/predict_edge2img.py --input_image signico_face.png --vectorizer result/edge2img_resize256_stage0.0_batch16_stginterval500000_latentON_1538310505/vectorizer_280000.npz --generator result/edge2img_resize256_stage0.0_batch16_stginterval500000_latentON_1538310505/generator_280000.npz --stage 8 --to_line --use_latent
 ```
 
+|input |colorized|
+|---|---|
+|![](./sample/input5.png)|![](./sample/color5_use_latent.png)|
+
 ## Acknowledgements
 
 * Progressive Growing of GANs for Improved Quality, Stability, and Variation
