@@ -55,10 +55,11 @@ def main(args: argparse.Namespace):
                    max(0, face_meta_1.x - int(margin * face_meta_1.width)):
                    min(blended.shape[1], face_meta_1.x + face_meta_1.width + int(margin * face_meta_1.height))]
 
-    cv2.imwrite("input.png", blended)
-
+    cv2.imwrite("input.png", blended_face)
     result_image = tools.utils.predict(blended_face, args.resize, args.stage, vectorizer, generator)
     result_image = cv2.resize(result_image, blended_face.shape[:2][::-1])
+    cv2.imwrite("result_face.png", result_image)
+
     blended[
     max(0, face_meta_1.y - int(margin * face_meta_1.height)):
     min(blended.shape[0], face_meta_1.y + face_meta_1.height + int(margin * face_meta_1.height)),
