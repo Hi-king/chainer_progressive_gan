@@ -44,6 +44,13 @@ python tools/conditionals/edge2img/predict_edge2img.py --input_image signico_fac
 |---|---|
 |![](./sample/input5.png)|![](./sample/color5_use_latent.png)|
 
+### pose2img
+
+|imageA|poseA|poseB|imageB(generated)|
+|---|---|---|---|
+|![](./sample/pose2img/input_image.png)|![](./sample/pose2img/input_pose.png)|![](./sample/pose2img/target_pose.png)|![](./sample/pose2img/result_image.png)|
+
+
 ## Acknowledgements
 
 * Progressive Growing of GANs for Improved Quality, Stability, and Variation

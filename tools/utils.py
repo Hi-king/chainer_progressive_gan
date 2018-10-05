@@ -53,7 +53,7 @@ def load_models(resize, use_latent: bool, pooling_comp: float = 1.0, input_chann
 
 def predict(image, resize, stage, vectorizer, generator, rows=1, cols=1):
     image = cv2.resize(image, (resize, resize))
-    cv2.imwrite("input.png", image)
+    cv2.imwrite("input.png", image[:,:,:3])
     image = image.astype(numpy.float32).transpose((2, 0, 1))
     image = (image - 127.5) / 127.5
 
