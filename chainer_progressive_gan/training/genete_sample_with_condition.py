@@ -38,14 +38,15 @@ class GenerateSampleWithCondition(chainer.training.extension.Extension):
                 cond = (1 - alpha) * cond_low + alpha * cond_high
         return cond
 
-    def _tiling(self, x:chainer.Variable):
+    @staticmethod
+    def tiling(x: chainer.Variable, rows, cols):
         x = chainer.cuda.to_cpu(x.data)
         x = x[:, :3, :, :]
         x = numpy.asarray(numpy.clip(x * 127.5 + 127.5, 0.0, 255.0), dtype=numpy.uint8)
         _, _, h, w = x.shape
-        x = x.reshape((self.rows, self.cols, 3, h, w))
+        x = x.reshape((rows, cols, 3, h, w))
         x = x.transpose(0, 3, 1, 4, 2)
-        x = x.reshape((self.rows * h, self.cols * w, 3))
+        x = x.reshape((rows * h, cols * w, 3))
         return x
 
     def __call__(self, trainer):
@@ -67,6 +68,9 @@ class GenerateSampleWithCondition(chainer.training.extension.Extension):
 
         if not self.output_dir.exists():
             self.output_dir.mkdir()
-        cv2.imwrite(str(self.output_dir / 'image_result_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(x))
-        cv2.imwrite(str(self.output_dir / 'image_condition_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(x_var))
-        cv2.imwrite(str(self.output_dir / 'image_ground_truth_{:0>8}.png'.format(trainer.updater.iteration)), self._tiling(y_var))
+        cv2.imwrite(str(self.output_dir / 'image_result_{:0>8}.png'.format(trainer.updater.iteration)),
+                    GenerateSampleWithCondition.tiling(x, self.rows, self.cols))
+        cv2.imwrite(str(self.output_dir / 'image_condition_{:0>8}.png'.format(trainer.updater.iteration)),
+                    GenerateSampleWithCondition.tiling(x_var, self.rows, self.cols))
+        cv2.imwrite(str(self.output_dir / 'image_ground_truth_{:0>8}.png'.format(trainer.updater.iteration)),
+                    GenerateSampleWithCondition.tiling(y_var, self.rows, self.cols))
