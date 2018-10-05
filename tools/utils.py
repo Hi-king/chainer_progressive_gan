@@ -51,13 +51,13 @@ def load_models(resize, use_latent: bool, pooling_comp: float = 1.0, input_chann
     return generator, generator_smooth, discriminator, vectorizer
 
 
-def predict(image, resize, stage, vectorizer, generator):
+def predict(image, resize, stage, vectorizer, generator, rows=1, cols=1):
     image = cv2.resize(image, (resize, resize))
     cv2.imwrite("input.png", image)
     image = image.astype(numpy.float32).transpose((2, 0, 1))
     image = (image - 127.5) / 127.5
 
-    image_var = chainer.Variable(image[numpy.newaxis, :, :, :])
+    image_var = chainer.Variable(numpy.array([image for _ in range(rows * cols)]))
 
     current_resize = min(resize, 4 * 2 ** ((stage + 1) // 2))
     scale = resize // current_resize
@@ -66,9 +66,9 @@ def predict(image, resize, stage, vectorizer, generator):
     print(image_var.shape)
 
     with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
-        z = chainer.Variable(numpy.asarray(generator.make_hidden(1)))
+        z = chainer.Variable(numpy.asarray(generator.make_hidden(rows * cols)))
         condition = vectorizer(image_var, stage=stage)
         result_image_var = generator(z, stage=stage, skip_hs=condition)
-        result_image = (result_image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5)
-        result_image = numpy.clip(result_image, 0.0, 255.0).astype(numpy.uint8)
-        return result_image
+        # result_image = (result_image_var.data[0].transpose((1, 2, 0)) * 127.5 + 127.5)
+        # result_image = numpy.clip(result_image, 0.0, 255.0).astype(numpy.uint8)
+        return chainer_progressive_gan.training.GenerateSampleWithCondition.tiling(result_image_var, rows, cols)
